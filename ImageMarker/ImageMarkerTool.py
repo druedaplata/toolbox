@@ -80,7 +80,7 @@ class ImageMarker():
 		save_dict.close()
 
 
-	def load_current_image(self, image_path, marks_dict):
+	def load_current_image(self, current_index, marks_dict):
 		"""
 		Loads an image and all marks found in the marks dict for it
 
@@ -90,6 +90,7 @@ class ImageMarker():
 		"""
 		try:
 			# Load current image
+			image_path = marks_dict.keys()[current_index]
 			current_image = cv2.imread('%s' % image_path)
 			# Draw labels for current image
 			if image_path in marks_dict:
@@ -177,10 +178,9 @@ class ImageMarker():
 		cv2.namedWindow("Current Image")
 		cv2.setMouseCallback("Current Image", self.draw_region)
 
-
 		while True:
 			# display current image
-			self.current_image = self.load_current_image(self.marks_dict.keys()[self.current_index], self.marks_dict)
+			self.current_image = self.load_current_image(self.current_index, self.marks_dict)
 
 			# wait and get a keypress
 			key = cv2.waitKey(1) & 0xFF
