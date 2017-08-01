@@ -119,25 +119,19 @@ class ImageMarker():
 		# if the left mouse was clicked, record the starting (x,y) coordinates
 		if event == cv2.EVENT_LBUTTONDOWN:
 			self.draw_points = [x,y]
-			print self.draw_points
 		# check to see if the mouse was released
 		elif event == cv2.EVENT_LBUTTONUP:
 			# record the ending (x,y) coordinates
 			self.draw_points.extend([x,y])
-			print self.draw_points
 			# draw a rectangle around the region of interest
 			x1,y1,x2,y2 = self.draw_points
-
 			cv2.rectangle(self.current_image, (x1,y1), (x2,y2), (0,255,0), 1)
 			cv2.imshow("Current Image", self.current_image)
 			# save mark in marks directory
-			print self.current_index
-			print self.marks_dict.keys()[ self.current_index ]
-			print self.marks_dict[ self.marks_dict.keys()[ self.current_index ] ]
 			self.marks_dict[ self.marks_dict.keys()[ self.current_index ] ].append(self.draw_points)
 
 
-	def generate_KITTI_labels(self, input_list, output_folder):
+	def generate_KITTI_labels(self, input_list, output_folder, marks_dict):
 		"""
 		Iterate all files and creates a KITTI format label files
 		in a way supported by Digits for object detection.
@@ -147,7 +141,7 @@ class ImageMarker():
 		output_folder -- folder where all KITTI files will be saved
 		"""		
 		print "Generating KITTI format marks..."
-		for filename, list_marks in self.marks_dict.iteritems():
+		for filename, list_marks in marks_dict.iteritems():
 			output_file = os.path.splitext(filename)[0]+".txt"
 			with open(output_folder + "/" + output_file, "w") as text_file:
 				for label in list_marks:
@@ -200,7 +194,7 @@ class ImageMarker():
 				self.current_index += 1
 
 			elif key == ord("g"):
-				self.generate_KITTI_labels(self.input_list, output_folder)
+				self.generate_KITTI_labels(self.input_list, output_folder, self.marks_dict)
 
 			elif key == ord("s"):
 				self.find_next_image_without_marks(input_folder)
