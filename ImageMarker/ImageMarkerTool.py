@@ -57,7 +57,6 @@ class ImageMarker():
 		input_folder -- folder where the images and 'marks.pickle' are stored
 		"""
 		marks_file = '%s%s' % (input_folder, 'marks.pickle')
-		print marks_file
 		try:
 			load_dict = open(marks_file, 'rb')
 			tmp_dict = pickle.load(load_dict)
@@ -67,7 +66,7 @@ class ImageMarker():
 			return { key:[] for key in input_list}
 
 
-	def save_marks(self, input_folder):
+	def save_marks(self, input_folder, marks_dict):
 		"""
 		Save marks on images to a pickle file.
 
@@ -77,7 +76,7 @@ class ImageMarker():
 		"""
 		marks_file = '%s%s' % (input_folder, 'marks.pickle')
 		save_dict = open(marks_file, 'wb')
-		pickle.dump(self.marks_dict, save_dict)
+		pickle.dump(marks_dict, save_dict)
 		save_dict.close()
 
 
@@ -212,11 +211,11 @@ class ImageMarker():
 					print "There are no marks in this image" 
 			# if "q" is pressed, close the script         
 			elif key == ord("q"):  	
-				self.save_marks(input_folder)
+				self.save_marks(input_folder, self.marks_dict)
 				break
 
 			# always save the marks in file
-			self.save_marks(input_folder)
+			self.save_marks(input_folder, self.marks_dict)
 
 
 if __name__ == '__main__':
