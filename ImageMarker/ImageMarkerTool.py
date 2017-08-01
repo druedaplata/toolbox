@@ -178,8 +178,8 @@ class ImageMarker():
 		cv2.namedWindow("Current Image")
 		cv2.setMouseCallback("Current Image", self.draw_region)
 
+
 		while True:
-			print "always looping :("
 			# display current image
 			self.current_image = self.load_current_image(self.current_index, self.marks_dict)
 
