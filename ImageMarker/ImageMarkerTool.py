@@ -138,7 +138,14 @@ class ImageMarker():
 
 
 	def generate_KITTI_labels(self, input_list, output_folder):
-		
+		"""
+		Iterate all files and creates a KITTI format label files
+		in a way supported by Digits for object detection.
+
+		Arguments:
+		input_list -- list of all image files
+		output_folder -- folder where all KITTI files will be saved
+		"""		
 		print "Generating KITTI format marks..."
 		for filename, list_marks in self.marks_dict.iteritems():
 			output_file = os.path.splitext(filename)[0]+".txt"
@@ -150,7 +157,12 @@ class ImageMarker():
 
 
 	def find_next_image_without_marks(self, input_folder):
-		
+		"""
+		Finds the next image without any marks in the marks dictionary
+
+		Arguments:
+		input_folder -- path to folder where all images are stored
+		"""		
 		for i, (filename, list_labels) in enumerate(self.marks_dict.iteritems()):
 			if not list_labels:
 				self.current_index = i
