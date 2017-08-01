@@ -150,18 +150,18 @@ class ImageMarker():
 		print "Done!"
 
 
-	def find_next_image_without_marks(self, input_folder):
+	def find_next_image_without_marks(self, current_index, marks_dict):
 		"""
 		Finds the next image without any marks in the marks dictionary
 
 		Arguments:
 		input_folder -- path to folder where all images are stored
 		"""		
-		for i, (filename, list_labels) in enumerate(self.marks_dict.iteritems()):
-			if not list_labels:
-				self.current_index = i
-				self.current_image = self.load_current_image(filename, self.marks_dict)
-				break
+		for i, (filename, list_labels) in enumerate(marks_dict.iteritems()):
+			if not list_labels:				
+				current_index = i
+				current_image = self.load_current_image(filename, marks_dict)
+				return current_index, current_image
 
 
 	def main(self, input_folder, output_folder):
@@ -197,7 +197,7 @@ class ImageMarker():
 				self.generate_KITTI_labels(self.input_list, output_folder, self.marks_dict)
 
 			elif key == ord("s"):
-				self.find_next_image_without_marks(input_folder)
+				self.current_index, self.current_image = self.find_next_image_without_marks(self.current_index, self.marks_dict)
 
 			elif key == ord("r"):
 				try:
