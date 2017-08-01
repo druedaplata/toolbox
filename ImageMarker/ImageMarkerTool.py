@@ -80,7 +80,7 @@ class ImageMarker():
 		save_dict.close()
 
 
-	def load_current_image(self, image_path):
+	def load_current_image(self, image_path, marks_dict):
 		"""
 		Loads an image and all marks found in the marks dict for it
 
@@ -90,16 +90,17 @@ class ImageMarker():
 		"""
 		try:
 			# Load current image
-			self.current_image = cv2.imread('%s' % image_path)
+			current_image = cv2.imread('%s' % image_path)
 			# Draw labels for current image
-			if image_path in self.marks_dict:
-				for mark in self.marks_dict[image_path]:
+			if image_path in marks_dict:
+				for mark in marks_dict[image_path]:
 					# Draw marks
 					x1,y1,x2,y2 = mark
-					cv2.rectangle(self.current_image, (x1,y1), (x2,y2), (0,255,0), 1)
+					cv2.rectangle(current_image, (x1,y1), (x2,y2), (0,255,0), 1)
 			
 			# Show current image
-			cv2.imshow("Current Image", self.current_image)
+			cv2.imshow("Current Image", current_image)
+			return current_image
 		except:
 			print "error: " + image_path
 
@@ -165,7 +166,7 @@ class ImageMarker():
 		for i, (filename, list_labels) in enumerate(self.marks_dict.iteritems()):
 			if not list_labels:
 				self.current_index = i
-				self.load_current_image(filename)
+				self.current_image = self.load_current_image(filename, self.marks_dict)
 				break
 
 
@@ -185,7 +186,7 @@ class ImageMarker():
 
 		while True:
 			# display current image
-			self.load_current_image(self.marks_dict.keys()[self.current_index])
+			self.current_image = self.load_current_image(self.marks_dict.keys()[self.current_index], self.marks_dict)
 
 			# wait and get a keypress
 			key = cv2.waitKey(1) & 0xFF
