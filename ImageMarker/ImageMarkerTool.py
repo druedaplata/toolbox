@@ -97,13 +97,15 @@ class ImageMarker():
 				for mark in marks_dict[image_path]:
 					# Draw marks
 					x1,y1,x2,y2 = mark
-					cv2.rectangle(current_image, (x1,y1), (x2,y2), (0,255,0), 1)
+					cv2.rectangle(current_image, (x1,y1), (x2,y2), (0,255,0), 2)
 			
 			# Show current image
 			cv2.imshow("Current Image", current_image)
-			return current_image
+			return current_image, current_index
 		except:
-			print "error: " + image_path
+			image_path = marks_dict.keys()[0]
+			current_image = cv2.imread('%s' % image_path)
+			return current_image, 0
 
 
 
@@ -118,6 +120,7 @@ class ImageMarker():
 		y -- y coordinate of the click in an image
 		"""
 		# if the left mouse was clicked, record the starting (x,y) coordinates
+
 		if event == cv2.EVENT_LBUTTONDOWN:
 			self.draw_points = [x,y]
 		# check to see if the mouse was released
@@ -126,10 +129,20 @@ class ImageMarker():
 			self.draw_points.extend([x,y])
 			# draw a rectangle around the region of interest
 			x1,y1,x2,y2 = self.draw_points
-			cv2.rectangle(self.current_image, (x1,y1), (x2,y2), (0,255,0), 1)
+			cv2.rectangle(self.current_image, (x1,y1), (x2,y2), (0,255,0), 2)
 			cv2.imshow("Current Image", self.current_image)
 			# save mark in marks directory
 			self.marks_dict[ self.marks_dict.keys()[ self.current_index ] ].append(self.draw_points)
+			self.draw_points = []
+
+		elif event == cv2.EVENT_MOUSEMOVE:
+			if self.draw_points:
+				tmp_points = self.draw_points + [x,y]
+				x1,y1,x2,y2 = tmp_points
+				tmp_image = self.current_image.copy()
+				cv2.rectangle(tmp_image, (x1,y1), (x2,y2), (0,255,0), 2)
+				cv2.imshow("Current Image", tmp_image)
+
 
 
 	def generate_KITTI_labels(self, input_list, output_folder, marks_dict):
@@ -161,8 +174,15 @@ class ImageMarker():
 		for i, (filename, list_labels) in enumerate(marks_dict.iteritems()):
 			if not list_labels:				
 				current_index = i
-				current_image = self.load_current_image(filename, marks_dict)
+				current_image, current_index = self.load_current_image(filename, marks_dict)
 				return current_index, current_image
+
+	def remove_last_mark_created(self, marks_dict, current_index):
+		try:
+			marks_dict[marks_dict.keys()[current_index]].pop()
+			return marks_dict
+		except IndexError:
+			print "There are no marks in this image" 
 
 
 	def main(self, input_folder, output_folder):
@@ -178,13 +198,13 @@ class ImageMarker():
 		cv2.namedWindow("Current Image")
 		cv2.setMouseCallback("Current Image", self.draw_region)
 
-
-		while True:
+		key = ''
+		while key != ord("q"):
 			# display current image
-			self.current_image = self.load_current_image(self.current_index, self.marks_dict)
+			self.current_image, self.current_index = self.load_current_image(self.current_index, self.marks_dict)
 
 			# wait and get a keypress
-			key = cv2.waitKey(1) & 0xFF
+			key = cv2.waitKey() & 0xFF
 
 			# if "a" is pressed, move left on images list
 			if key == ord("a"):
@@ -201,10 +221,7 @@ class ImageMarker():
 				self.current_index, self.current_image = self.find_next_image_without_marks(self.current_index, self.marks_dict)
 
 			elif key == ord("r"):
-				try:
-					self.marks_dict[self.marks_dict.keys()[self.current_index]].pop()
-				except IndexError:
-					print "There are no marks in this image" 
+				self.marks_dict = self.remove_last_mark_created(self.marks_dict, self.current_index)
 			# if "q" is pressed, close the script         
 			elif key == ord("q"):  	
 				self.save_marks(input_folder, self.marks_dict)
