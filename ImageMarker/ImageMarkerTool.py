@@ -192,6 +192,7 @@ class ImageMarker():
 			return marks_dict
 		except IndexError:
 			print "There are no marks in this image" 
+			return marks_dict
 
 
 	def main(self, input_folder, output_folder):
