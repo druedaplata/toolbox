@@ -103,9 +103,10 @@ class ImageMarker():
 			cv2.imshow("Current Image", current_image)
 			return current_image, current_index
 		except:
-			image_path = marks_dict.keys()[0]
+			print current_index
+			image_path = marks_dict.keys()[1]
 			current_image = cv2.imread('%s' % image_path)
-			return current_image, 0
+			return current_image, 1
 
 
 
@@ -169,13 +170,20 @@ class ImageMarker():
 		Finds the next image without any marks in the marks dictionary
 
 		Arguments:
-		input_folder -- path to folder where all images are stored
-		"""		
+		current_index -- position of the current image shown
+		marks_dict -- marks dictionary with filename and labels 
+		"""	
 		for i, (filename, list_labels) in enumerate(marks_dict.iteritems()):
-			if not list_labels:				
+			if not list_labels:
 				current_index = i
-				current_image, current_index = self.load_current_image(filename, marks_dict)
+				current_image, current_index = self.load_current_image(current_index, marks_dict)
 				return current_index, current_image
+		
+		# if all images have labels, do nothing
+		print "All images have been labeled."
+		current_image, current_index = self.load_current_image(current_index, marks_dict)
+		return current_index, current_image
+
 
 	def remove_last_mark_created(self, marks_dict, current_index):
 		try:
