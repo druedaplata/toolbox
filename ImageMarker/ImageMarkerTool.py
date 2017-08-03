@@ -86,25 +86,20 @@ class ImageMarker():
         input_folder -- path to folder with all images
         image_path -- path to the current image to be displayed
         """
-        try:
-            # Load current image
-            image_path = list(marks_dict.keys())[current_index]
-            current_image = cv2.imread('%s' % image_path)
-            # Draw labels for current image
-            if image_path in marks_dict:
-                for mark in marks_dict[image_path]:
-                    # Draw marks
-                    x1,y1,x2,y2 = mark
-                    cv2.rectangle(current_image, (x1,y1), (x2,y2), (0,255,0), 2)
-            
-            # Show current image
-            cv2.imshow("Current Image", current_image)
-            return current_image, current_index
-        except:
-            image_path = list(marks_dict.keys())[1]
-            current_image = cv2.imread('%s' % image_path)
-            return current_image, 1
-
+        
+        keys = list(marks_dict.keys())
+        current_index = 0 if current_index >= len(keys) else current_index
+        # Load current image
+        image_path = keys[current_index]
+        current_image = cv2.imread('%s' % image_path)
+        # Draw labels for current image
+        if image_path in marks_dict:
+            for mark in marks_dict[image_path]:
+                # Draw marks
+                x1,y1,x2,y2 = mark
+                cv2.rectangle(current_image, (x1,y1), (x2,y2), (0,255,0), 2)
+        cv2.imshow("Current Image", current_image)
+        return current_image, current_index
 
 
     def draw_region(self, event, x, y, flags, param):
