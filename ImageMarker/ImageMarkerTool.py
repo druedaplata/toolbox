@@ -1,10 +1,8 @@
 # Import necessary packages
 import cv2
-import numpy as np
 import glob
 import sys
 import os
-import csv
 import pickle
 import itertools
 from os.path import basename, splitext
@@ -91,7 +89,7 @@ class ImageMarker():
 		"""
 		try:
 			# Load current image
-			image_path = marks_dict.keys()[current_index]
+			image_path = list(marks_dict.keys())[current_index]
 			current_image = cv2.imread('%s' % image_path)
 			# Draw labels for current image
 			if image_path in marks_dict:
@@ -104,7 +102,7 @@ class ImageMarker():
 			cv2.imshow("Current Image", current_image)
 			return current_image, current_index
 		except:
-			image_path = marks_dict.keys()[1]
+			image_path = list(marks_dict.keys())[1]
 			current_image = cv2.imread('%s' % image_path)
 			return current_image, 1
 
@@ -133,7 +131,7 @@ class ImageMarker():
 			cv2.rectangle(self.current_image, (x1,y1), (x2,y2), (0,255,0), 2)
 			cv2.imshow("Current Image", self.current_image)
 			# save mark in marks directory
-			self.marks_dict[ self.marks_dict.keys()[ self.current_index ] ].append(self.draw_points)
+			self.marks_dict[ list(self.marks_dict.keys())[ self.current_index ] ].append(self.draw_points)
 			self.draw_points = []
 
 		elif event == cv2.EVENT_MOUSEMOVE:
@@ -155,15 +153,15 @@ class ImageMarker():
 		input_list -- list of all image files
 		output_folder -- folder where all KITTI files will be saved
 		"""		
-		print "Generating KITTI format marks..."
-		for filename, list_marks in marks_dict.iteritems():
+		print ("Generating KITTI format marks...")
+		for filename, list_marks in marks_dict.items():
 			input_name = basename(filename)
 			output_name = splitext(input_name)[0]+".txt"
 			with open(output_folder + "/" + output_name, "w") as text_file:
 				for label in list_marks:
 					x1,y1,x2,y2 = label
 					text_file.write("aislador 0 0 0 %s %s %s %s 0 0 0 0 0 0 0\n" % (x1, y1, x2, y2)) 
-		print "Done!"
+		print ("Done!")
 
 
 	def find_next_image_without_marks(self, current_index, marks_dict):
@@ -174,24 +172,24 @@ class ImageMarker():
 		current_index -- position of the current image shown
 		marks_dict -- marks dictionary with filename and labels 
 		"""	
-		for i, (filename, list_labels) in enumerate(marks_dict.iteritems()):
+		for i, (filename, list_labels) in enumerate(marks_dict.items()):
 			if not list_labels:
 				current_index = i
 				current_image, current_index = self.load_current_image(current_index, marks_dict)
 				return current_index, current_image
 		
 		# if all images have labels, do nothing
-		print "All images have been labeled."
+		print ("All images have been labeled.")
 		current_image, current_index = self.load_current_image(current_index, marks_dict)
 		return current_index, current_image
 
 
 	def remove_last_mark_created(self, marks_dict, current_index):
 		try:
-			marks_dict[marks_dict.keys()[current_index]].pop()
+			marks_dict[list(marks_dict.keys())[current_index]].pop()
 			return marks_dict
 		except IndexError:
-			print "There are no marks in this image" 
+			print ("There are no marks in this image" )
 			return marks_dict
 
 
