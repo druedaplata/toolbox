@@ -7,6 +7,7 @@ import os
 import csv
 import pickle
 import itertools
+from os.path import basename, splitext
 
 """
 Script created to mark images in KITTI style for Digits
@@ -103,7 +104,6 @@ class ImageMarker():
 			cv2.imshow("Current Image", current_image)
 			return current_image, current_index
 		except:
-			print current_index
 			image_path = marks_dict.keys()[1]
 			current_image = cv2.imread('%s' % image_path)
 			return current_image, 1
@@ -157,8 +157,9 @@ class ImageMarker():
 		"""		
 		print "Generating KITTI format marks..."
 		for filename, list_marks in marks_dict.iteritems():
-			output_file = os.path.splitext(filename)[0]+".txt"
-			with open(output_folder + "/" + output_file, "w") as text_file:
+			input_name = basename(filename)
+			output_name = splitext(input_name)[0]+".txt"
+			with open(output_folder + "/" + output_name, "w") as text_file:
 				for label in list_marks:
 					x1,y1,x2,y2 = label
 					text_file.write("aislador 0 0 0 %s %s %s %s 0 0 0 0 0 0 0\n" % (x1, y1, x2, y2)) 
