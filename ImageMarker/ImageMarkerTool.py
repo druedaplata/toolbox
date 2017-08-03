@@ -22,11 +22,13 @@ class ImageMarker():
         self.current_index = 0
         self.input_list = []
         self.draw_points = []
+        self.options = { 'show_size': True, 'size_warn': True }
 
 
     def read_input_folder(self, input_folder):
         """
         Read all images inside a folder, and return a list of all suported files
+        
         Arguments:
             input_folder -- path to folder with images
         """
@@ -41,7 +43,7 @@ class ImageMarker():
         Check if output folder exists, if not create one.
 
         Arguments:
-        output_folder -- path where the KITTI format files for each image will be saved
+            output_folder -- path where the KITTI format files for each image will be saved
         """
         if not os.path.isdir(output_folder):
             os.makedirs(output_folder)
@@ -52,7 +54,7 @@ class ImageMarker():
         Loads a 'marks.pickle' file with all saved marks from previous works
 
         Arguments:
-        input_folder -- folder where the images and 'marks.pickle' are stored
+            input_folder -- folder where the images and 'marks.pickle' are stored
         """
         marks_file = '%s%s' % (input_folder, 'marks.pickle')
         try:
@@ -69,8 +71,8 @@ class ImageMarker():
         Save marks on images to a pickle file.
 
         Arguments:
-        input_folder -- input folder where the pickle file will be saved
-        marks_dict -- marks file 
+            input_folder -- input folder where the pickle file will be saved
+            marks_dict -- marks file 
         """
         marks_file = '%s%s' % (input_folder, 'marks.pickle')
         save_dict = open(marks_file, 'wb')
@@ -83,8 +85,8 @@ class ImageMarker():
         Loads an image and all marks found in the marks dict for it
 
         Arguments:
-        input_folder -- path to folder with all images
-        image_path -- path to the current image to be displayed
+            input_folder -- path to folder with all images
+            image_path -- path to the current image to be displayed
         """
         
         keys = list(marks_dict.keys())
@@ -97,20 +99,54 @@ class ImageMarker():
             for mark in marks_dict[image_path]:
                 # Draw marks
                 x1,y1,x2,y2 = mark
-                cv2.rectangle(current_image, (x1,y1), (x2,y2), (0,255,0), 2)
+                self.draw_selection(current_image, x1, y1, x2, y2)
+                if self.options['show_size']:
+                    self.print_size_text(self.options, current_image, x1, y1, x2, y2)
         cv2.imshow("Current Image", current_image)
         return current_image, current_index
 
+    def print_size_text(self, options, img, x1, y1, x2, y2):
+        """
+        Prints text on the image, next to the label created,
+        if the label is smaller than 50x50 pixels, it's shown in Red.
+        
+        Arguments:
+            options -- values to show or not the text
+            img -- current image being drawn
+            x1, y1, x2, y2 -- coordinates of the label created
+        
+        """
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        w = abs(x2-x1)
+        h = abs(y2-y1)
+        text = "[%d,%d]" % (abs(x2-x1), abs(y2-y1))
+        if options['size_warn'] and ((w >= 50) and (h >= 50)) and ((w <= 400) and (h <= 400)):
+            cv2.putText(img, text, (x2, y2), font, 0.6, (0,255,0), 2)
+        else:
+            cv2.putText(img, text, (x2, y2), font, 0.6, (0,0,255), 2)
 
-    def draw_region(self, event, x, y, flags, param):
+    def draw_selection(self, img, x1, y1, x2, y2):
+        """
+        Draws a label in an image
+        
+        Arguments:
+            img -- current image being drawn
+            x1, y1, x2, y2 -- coordinates of the label created
+        """
+        cv2.line(img, (x1,y1), (x2,y2), (0,0,0), 2, cv2.LINE_AA)
+        cv2.line(img, (x1,y2), (x2,y1), (0,0,0), 2, cv2.LINE_AA)
+        cv2.rectangle(img, (x1,y1), (x2,y2), (0,255,0), 2, cv2.LINE_AA)
+    
+
+    def mouse_actions(self, event, x, y, flags, param):
         """
         Drawing event, used to mark all objects in an image.
         Click, drag and release to mark an object.
 
         Arguments:
-        event -- which type of event is recorded, lbuttonddown or lbuttonup
-        x -- x coordinate of the click in an image
-        y -- y coordinate of the click in an image
+            event -- which type of event is recorded lbuttonddown, lbuttonup or mousemove
+            x -- x coordinate of the click in an image
+            y -- y coordinate of the click in an image
         """
         # if the left mouse was clicked, record the starting (x,y) coordinates
 
@@ -122,7 +158,9 @@ class ImageMarker():
             self.draw_points.extend([x,y])
             # draw a rectangle around the region of interest
             x1,y1,x2,y2 = self.draw_points
-            cv2.rectangle(self.current_image, (x1,y1), (x2,y2), (0,255,0), 2)
+            self.draw_selection(self.current_image, x1, y1, x2, y2)
+            if self.options['show_size']:
+                self.print_size_text(self.options, self.current_image, x1, y1, x2, y2)              
             cv2.imshow("Current Image", self.current_image)
             # save mark in marks directory
             self.marks_dict[ list(self.marks_dict.keys())[ self.current_index ] ].append(self.draw_points)
@@ -133,7 +171,9 @@ class ImageMarker():
                 tmp_points = self.draw_points + [x,y]
                 x1,y1,x2,y2 = tmp_points
                 tmp_image = self.current_image.copy()
-                cv2.rectangle(tmp_image, (x1,y1), (x2,y2), (0,255,0), 2)
+                self.draw_selection(tmp_image, x1, y1, x2, y2)
+                if self.options['show_size']:
+                    self.print_size_text(self.options, tmp_image, x1, y1, x2, y2) 
                 cv2.imshow("Current Image", tmp_image)
 
 
@@ -144,8 +184,8 @@ class ImageMarker():
         in a way supported by Digits for object detection.
 
         Arguments:
-        input_list -- list of all image files
-        output_folder -- folder where all KITTI files will be saved
+            input_list -- list of all image files
+            output_folder -- folder where all KITTI files will be saved
         """        
         print ("Generating KITTI format marks...")
         for filename, list_marks in marks_dict.items():
@@ -163,8 +203,8 @@ class ImageMarker():
         Finds the next image without any marks in the marks dictionary
 
         Arguments:
-        current_index -- position of the current image shown
-        marks_dict -- marks dictionary with filename and labels 
+            current_index -- position of the current image shown
+            marks_dict -- marks dictionary with filename and labels 
         """    
         for i, (filename, list_labels) in enumerate(marks_dict.items()):
             if not list_labels:
@@ -179,6 +219,13 @@ class ImageMarker():
 
 
     def remove_last_mark_created(self, marks_dict, current_index):
+        """
+        Removes the last mark created in the current image being shown
+        
+        Arguments:
+            marks_dict -- dictionary with all image paths and labels created
+            current_index -- index of the current image shown
+        """
         try:
             marks_dict[list(marks_dict.keys())[current_index]].pop()
             return marks_dict
@@ -198,7 +245,7 @@ class ImageMarker():
         self.marks_dict = self.load_saved_marks(input_folder, self.input_list)
 
         cv2.namedWindow("Current Image")
-        cv2.setMouseCallback("Current Image", self.draw_region)
+        cv2.setMouseCallback("Current Image", self.mouse_actions)
 
         key = ''
         while key != ord("q"):
@@ -227,6 +274,8 @@ class ImageMarker():
             # if "q" is pressed, close the script         
             elif key == ord("q"):      
                 self.save_marks(input_folder, self.marks_dict)
+            elif key == ord("1"):
+                self.options['show_size'] = not self.options['show_size']
 
             # always save the marks in file
             self.save_marks(input_folder, self.marks_dict)
