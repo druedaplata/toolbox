@@ -235,7 +235,6 @@ class ImageMarker():
 			# if "q" is pressed, close the script         
 			elif key == ord("q"):  	
 				self.save_marks(input_folder, self.marks_dict)
-				break
 
 			# always save the marks in file
 			self.save_marks(input_folder, self.marks_dict)
