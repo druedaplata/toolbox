@@ -234,7 +234,7 @@ class ImageMarker():
             return marks_dict
 
 
-    def main(self, input_folder, output_folder):
+    def run(self, input_folder, output_folder):
         # Load input folder
         self.input_list = self.read_input_folder(input_folder)
 
@@ -283,4 +283,4 @@ class ImageMarker():
 
 if __name__ == '__main__':
     x = ImageMarker()
-    x.main(sys.argv[1], sys.argv[2])
+    x.run(sys.argv[1], sys.argv[2])
