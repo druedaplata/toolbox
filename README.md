@@ -1,12 +1,19 @@
-# toolbox
+# Toolbox
 
 ## 1. ImageMarker
+This tool helps labeling files for object detection in Digits.
+Each mark created in an image is transformed to KITTI format labeling.
+It supports several labels.
 
-Simple tool to mark images with a bounding box for object detection in Digits
+### How to use?
+```
+./ImageMarkerTool.py input/ output/ labels
+```
 
 * 'a' - move left on images list
 * 'd' - move right on images list
-* 'g' - generate kitti labels
+* '1' - cycle trough labels
 * 's' - find next image without labels
 * 'r' - remove last label created
+* 'g' - generate kitti labels
 * 'q' - close 
