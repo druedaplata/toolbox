@@ -23,6 +23,7 @@ class ImageMarker():
         self.input_list = []
         self.draw_points = []
         self.options = { 'show_size': True, 'size_warn': True }
+        self.current_label_index = 0
 
 
     def read_input_folder(self, input_folder):
@@ -80,7 +81,7 @@ class ImageMarker():
         save_dict.close()
 
 
-    def load_current_image(self, current_index, marks_dict):
+    def load_current_image(self, current_index, marks_dict, current_label):
         """
         Loads an image and all marks found in the marks dict for it
 
@@ -94,9 +95,12 @@ class ImageMarker():
         # Load current image
         image_path = keys[current_index]
         current_image = cv2.imread('%s' % image_path)
+
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        cv2.putText(current_image, "Label: %s" % current_label, (10, 20), font, 0.6, (0,0,0), 2)
         # Draw labels for current image
         if image_path in marks_dict:
-            for mark in marks_dict[image_path]:
+            for mark in marks_dict[image_path][current_label]:
                 # Draw marks
                 x1,y1,x2,y2 = mark
                 self.draw_selection(current_image, x1, y1, x2, y2)
@@ -163,7 +167,9 @@ class ImageMarker():
                 self.print_size_text(self.options, self.current_image, x1, y1, x2, y2)              
             cv2.imshow("Current Image", self.current_image)
             # save mark in marks directory
-            self.marks_dict[ list(self.marks_dict.keys())[ self.current_index ] ].append(self.draw_points)
+
+            key = list(self.marks_dict)[self.current_index]
+            self.marks_dict[key][self.current_label].append(self.draw_points)
             self.draw_points = []
 
         elif event == cv2.EVENT_MOUSEMOVE:
@@ -188,17 +194,18 @@ class ImageMarker():
             output_folder -- folder where all KITTI files will be saved
         """        
         print ("Generating KITTI format marks...")
-        for filename, list_marks in marks_dict.items():
+        for filename, labels in marks_dict.items():
             input_name = basename(filename)
             output_name = splitext(input_name)[0]+".txt"
             with open(output_folder + "/" + output_name, "w") as text_file:
-                for label in list_marks:
-                    x1,y1,x2,y2 = label
-                    text_file.write("aislador 0 0 0 %s %s %s %s 0 0 0 0 0 0 0\n" % (x1, y1, x2, y2)) 
+                for key, values in labels.items():
+                    if values:
+                        for x1,y1,x2,y2 in values:
+                            text_file.write("%s 0 0 0 %s %s %s %s 0 0 0 0 0 0 0\n" % (key, x1, y1, x2, y2)) 
         print ("Done!")
 
 
-    def find_next_image_without_marks(self, current_index, marks_dict):
+    def find_next_image_without_marks(self, current_index, marks_dict, current_label):
         """
         Finds the next image without any marks in the marks dictionary
 
@@ -206,19 +213,19 @@ class ImageMarker():
             current_index -- position of the current image shown
             marks_dict -- marks dictionary with filename and labels 
         """    
-        for i, (filename, list_labels) in enumerate(marks_dict.items()):
-            if not list_labels:
+        for i, (filename, labels) in enumerate(marks_dict.items()):
+            if not labels[current_label]:
                 current_index = i
-                current_image, current_index = self.load_current_image(current_index, marks_dict)
+                current_image, current_index = self.load_current_image(current_index, marks_dict, self.current_label)
                 return current_index, current_image
         
         # if all images have labels, do nothing
         print ("All images have been labeled.")
-        current_image, current_index = self.load_current_image(current_index, marks_dict)
+        current_image, current_index = self.load_current_image(current_index, marks_dict, self.current_label)
         return current_index, current_image
 
 
-    def remove_last_mark_created(self, marks_dict, current_index):
+    def remove_last_mark_created(self, marks_dict, current_index, current_label):
         """
         Removes the last mark created in the current image being shown
         
@@ -227,33 +234,47 @@ class ImageMarker():
             current_index -- index of the current image shown
         """
         try:
-            marks_dict[list(marks_dict.keys())[current_index]].pop()
+            marks_dict[ list(marks_dict.keys())[current_index]][current_label].pop()
             return marks_dict
         except IndexError:
             print ("There are no marks in this image" )
             return marks_dict
+        
+    
+    def read_labels_file(self, labels_file_path):
+    	"""
+    	"""
+    	with open(labels_file_path) as f:
+    		lines = f.read().splitlines()
+    		return lines
 
 
-    def run(self, input_folder, output_folder):
+    def run(self, input_folder, output_folder, labels_file_path):
         # Load input folder
         self.input_list = self.read_input_folder(input_folder)
 
         # Setup output folder
         self.setup_output_folder(output_folder)
-
+        
+        self.labels = self.read_labels_file(labels_file_path)
+        self.current_label = self.labels[self.current_label_index]
+        
         # Load image marks from input directory
         self.marks_dict = self.load_saved_marks(input_folder, self.input_list)
-
+        
         cv2.namedWindow("Current Image")
         cv2.setMouseCallback("Current Image", self.mouse_actions)
 
         key = ''
         while key != ord("q"):
+            
             # display current image
-            self.current_image, self.current_index = self.load_current_image(self.current_index, self.marks_dict)
+            self.current_image, self.current_index = self.load_current_image(self.current_index, self.marks_dict, self.current_label)
+
 
             # wait and get a keypress
             key = cv2.waitKey() & 0xFF
+
 
             # if "a" is pressed, move left on images list
             if key == ord("a"):
@@ -267,15 +288,22 @@ class ImageMarker():
                 self.generate_KITTI_labels(self.input_list, output_folder, self.marks_dict)
 
             elif key == ord("s"):
-                self.current_index, self.current_image = self.find_next_image_without_marks(self.current_index, self.marks_dict)
+                self.current_index, self.current_image = self.find_next_image_without_marks(self.current_index, self.marks_dict, self.current_label)
 
             elif key == ord("r"):
-                self.marks_dict = self.remove_last_mark_created(self.marks_dict, self.current_index)
+                self.marks_dict = self.remove_last_mark_created(self.marks_dict, self.current_index, self.current_label)
             # if "q" is pressed, close the script         
             elif key == ord("q"):      
                 self.save_marks(input_folder, self.marks_dict)
-            elif key == ord("1"):
+
+            elif key == ord("p"):
                 self.options['show_size'] = not self.options['show_size']
+
+            elif key == ord("1"):
+            	self.current_label_index += 1
+            	if self.current_label_index >= len(self.labels):
+            		self.current_label_index = 0
+            	self.current_label = self.labels[self.current_label_index]
 
             # always save the marks in file
             self.save_marks(input_folder, self.marks_dict)
@@ -283,4 +311,4 @@ class ImageMarker():
 
 if __name__ == '__main__':
     x = ImageMarker()
-    x.run(sys.argv[1], sys.argv[2])
+    x.run(sys.argv[1], sys.argv[2], sys.argv[3])
