@@ -9,7 +9,6 @@ It supports several labels.
 ```
 ./ImageMarkerTool.py input/ output/ labels
 ```
-
 * 'a' - move left on images list
 * 'd' - move right on images list
 * '1' - cycle trough labels
@@ -18,3 +17,7 @@ It supports several labels.
 * 'r' - remove last label created
 * 'g' - generate kitti labels
 * 'q' - close 
+
+### Requirements
+* numpy==1.11.0
+* cv2==3.2.0
