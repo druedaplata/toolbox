@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # Import necessary packages
 import cv2
 import glob
@@ -50,22 +51,28 @@ class ImageMarker():
             os.makedirs(output_folder)
 
 
-    def load_saved_marks(self, input_folder, input_list):
+    def load_marks_dict(self, input_folder, input_list, labels):
         """
-        Loads a 'marks.pickle' file with all saved marks from previous works
-
+        Loads a 'marks.pickle' file with previous saved marks if it exists,
+        otherwise it creates an empty marks dictionary.
+        
         Arguments:
-            input_folder -- folder where the images and 'marks.pickle' are stored
+            input_folder -- path where all images are stored
+            input_list -- list of all images in input_folder
+            labels -- list of labels 
         """
-        marks_file = '%s%s' % (input_folder, 'marks.pickle')
-        try:
-            load_dict = open(marks_file, 'rb')
-            tmp_dict = pickle.load(load_dict)
-            load_dict.close()
-            return tmp_dict
-        except IOError:
-            return { key:[] for key in input_list}
-
+        marks_file = '%s%s' % (input_folder, 'marks.pickle') 
+        if os.path.isfile(marks_file):
+            try:
+                load_dict = open(marks_file, 'rb')
+                tmp_dict = pickle.load(load_dict)
+                load_dict.close()
+                return tmp_dict
+            except IOError:
+                return { key:[] for key in input_list}
+        else:
+            return { input_path:{ label:[] for label in labels } for input_path in input_list }
+            
 
     def save_marks(self, input_folder, marks_dict):
         """
@@ -109,6 +116,7 @@ class ImageMarker():
         cv2.imshow("Current Image", current_image)
         return current_image, current_index
 
+
     def print_size_text(self, options, img, x1, y1, x2, y2):
         """
         Prints text on the image, next to the label created,
@@ -128,6 +136,7 @@ class ImageMarker():
             cv2.putText(img, text, (x2, y2), font, 0.6, (0,255,0), 2)
         else:
             cv2.putText(img, text, (x2, y2), font, 0.6, (0,0,255), 2)
+
 
     def draw_selection(self, img, x1, y1, x2, y2):
         """
@@ -181,7 +190,6 @@ class ImageMarker():
                 if self.options['show_size']:
                     self.print_size_text(self.options, tmp_image, x1, y1, x2, y2) 
                 cv2.imshow("Current Image", tmp_image)
-
 
 
     def generate_KITTI_labels(self, input_list, output_folder, marks_dict):
@@ -243,13 +251,27 @@ class ImageMarker():
     
     def read_labels_file(self, labels_file_path):
     	"""
+        Reads a file of labels to use,
+        labels must be one line each.
+        
+        Arguments:
+            labels_file_path -- path to a text file
     	"""
     	with open(labels_file_path) as f:
     		lines = f.read().splitlines()
     		return lines
-
+        
 
     def run(self, input_folder, output_folder, labels_file_path):
+        """
+        Main method in the script to start labeling images
+        
+        Arguments:
+            input_folder -- path to dir where all images are stored
+            output_folder -- path to dir where all labels in KITTI format will be saved
+            labels_file_path -- path to file with all labels to use
+        """
+        
         # Load input folder
         self.input_list = self.read_input_folder(input_folder)
 
@@ -259,9 +281,9 @@ class ImageMarker():
         self.labels = self.read_labels_file(labels_file_path)
         self.current_label = self.labels[self.current_label_index]
         
-        # Load image marks from input directory
-        self.marks_dict = self.load_saved_marks(input_folder, self.input_list)
-        
+        # Create marks_dict
+        self.marks_dict = self.load_marks_dict(input_folder, self.input_list, self.labels)
+              
         cv2.namedWindow("Current Image")
         cv2.setMouseCallback("Current Image", self.mouse_actions)
 
@@ -271,10 +293,8 @@ class ImageMarker():
             # display current image
             self.current_image, self.current_index = self.load_current_image(self.current_index, self.marks_dict, self.current_label)
 
-
             # wait and get a keypress
             key = cv2.waitKey() & 0xFF
-
 
             # if "a" is pressed, move left on images list
             if key == ord("a"):
@@ -283,10 +303,10 @@ class ImageMarker():
             # if "d" is pressed, move right on images list
             elif key == ord("d"):
                 self.current_index += 1
-
+            
             elif key == ord("g"):
                 self.generate_KITTI_labels(self.input_list, output_folder, self.marks_dict)
-
+            
             elif key == ord("s"):
                 self.current_index, self.current_image = self.find_next_image_without_marks(self.current_index, self.marks_dict, self.current_label)
 
