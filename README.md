@@ -13,6 +13,7 @@ It supports several labels.
 * 'a' - move left on images list
 * 'd' - move right on images list
 * '1' - cycle trough labels
+* 'p' - disable mark size 
 * 's' - find next image without labels
 * 'r' - remove last label created
 * 'g' - generate kitti labels
