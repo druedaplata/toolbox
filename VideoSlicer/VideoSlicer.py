@@ -16,6 +16,9 @@ video_capture.set(cv2.CAP_PROP_FPS, 5)
 if not os.path.exists(sys.argv[2]):
 	os.mkdir(output_folder)
 
+video_path = os.path.join(sys.argv[2], sys.argv[1])
+if not os.path.exists(video_path):
+	os.mkdir(video_path)
 
 count = 0
 
@@ -30,7 +33,7 @@ while(video_capture.isOpened()):
 	if ret == True:
 		# save current frame
 		if count % skip_frame == 0:
-			cv2.imwrite("%s/%s.jpg" % (output_folder, count), frame)
+			cv2.imwrite("%s/%s.jpg" % (video_path, count), frame)
 	else:
 		break
 
