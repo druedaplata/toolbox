@@ -6,6 +6,7 @@ import os
 import pickle
 import itertools
 import argparse
+import numpy as np
 from os.path import basename, splitext
 
 """
@@ -16,6 +17,7 @@ Only type, truncated and bbox are used in Digits, all other fields are default t
 
 
 class ImageMarker:
+
     def __init__(self, input_folder, output_folder, labels, mode, label_format):
         self.input_folder = input_folder
         self.input_files = self.read_input_files(input_folder)
@@ -24,13 +26,11 @@ class ImageMarker:
         self.mode = mode
         self.label_format = label_format
         self.draw_points = []
-        # self.marks_dict = {}
-        # self.current_image = None
-        # self.current_index = 0
-        # self.input_list = []
-        # self.draw_points = []
-        # self.options = {'show_size': True, 'size_warn': True}
-        # self.current_label_index = 0
+        self.marks_dict = {}
+        self.current_label = None
+        self.current_label_index = 0
+        self.current_image = None
+        self.current_index = 0
 
     def read_input_files(self, input_folder):
         """
@@ -65,7 +65,7 @@ class ImageMarker:
             input_list -- list of all images in input_folder
             labels -- list of labels 
         """
-        marks_file = '%s%s' % (input_folder, 'marks.pickle')
+        marks_file = '%s%s' % (input_folder, '%s_marks.pickle' % self.mode)
         if os.path.isfile(marks_file):
             try:
                 load_dict = open(marks_file, 'rb')
@@ -85,12 +85,12 @@ class ImageMarker:
             input_folder -- input folder where the pickle file will be saved
             marks_dict -- marks file 
         """
-        marks_file = '%s%s' % (input_folder, 'marks.pickle')
+        marks_file = '%s%s' % (input_folder, '%s_marks.pickle' % self.mode)
         save_dict = open(marks_file, 'wb')
         pickle.dump(marks_dict, save_dict)
         save_dict.close()
 
-    def load_current_image(self, current_index, marks_dict, current_label):
+    def load_current_image(self, current_index, marks_dict, current_label, mode):
         """
         Loads an image and all marks found in the marks dict for it
 
@@ -110,11 +110,12 @@ class ImageMarker:
         # Draw labels for current image
         if image_path in marks_dict:
             for mark in marks_dict[image_path][current_label]:
-                # Draw marks
-                x1, y1, x2, y2 = mark
-                self.draw_selection(current_image, x1, y1, x2, y2)
-                if self.options['show_size']:
-                    self.print_size_text(self.options, current_image, x1, y1, x2, y2)
+                if mode == 'detection':
+                    # Draw marks
+                    x1, y1, x2, y2 = mark
+                    self.draw_selection(current_image, x1, y1, x2, y2)
+                elif mode == 'segmentation':
+                    self.draw_polygon(current_image, mark)
         cv2.imshow("Current Image", current_image)
         return current_image, current_index
 
@@ -150,8 +151,49 @@ class ImageMarker:
         cv2.line(img, (x1, y2), (x2, y1), (0, 0, 0), 2, cv2.LINE_AA)
         cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2, cv2.LINE_AA)
 
-    def mouse_segmentation(self):
-        pass
+    def draw_polygon(self, current_image, draw_points, close=False):
+        """
+        Draws all points in draw_points list in order.
+
+            Arguments:
+                current_image -- Current image shown on display
+                draw_points -- list of pairs for each point in segmentation mode
+        """
+        for x1, y1 in draw_points:
+            cv2.rectangle(current_image, (x1-2, y1-2), (x1+2, y1+2), (255, 0, 0), 2, cv2.LINE_AA)
+
+        if len(draw_points) >= 2:
+            if not close:
+                cv2.polylines(current_image, np.int32([draw_points]), False, (0, 255, 0), 1, cv2.LINE_AA)
+            else:
+                cv2.polylines(current_image, np.int32([draw_points]), True, (0, 255, 0), 1, cv2.LINE_AA)
+                # cv2.fillPoly(current_image, np.int32([draw_points]), (0, 128, 0), cv2.LINE_AA)
+
+    def mouse_segmentation(self, event, x, y, flags, param):
+        """
+        Drawing event, used to mark objects for segmenation in an image.
+        Click each point in the polygon to label an object.
+
+        Arguments:
+            event -- which type of event is recorded
+            x -- x coordinate of the click in an image
+            y -- y coordinate of the click in an image
+
+        """
+        # if the left mouse is clicked, record the starting (x,y) coordinates
+        if event == cv2.EVENT_LBUTTONDOWN:
+            self.draw_points.append([x, y])
+        # check to see if the mouse was released
+        elif event == cv2.EVENT_LBUTTONUP:
+            self.draw_polygon(self.current_image, self.draw_points)
+            cv2.imshow("Current Image", self.current_image)
+        elif event == cv2.EVENT_RBUTTONDOWN:
+            if len(self.draw_points) >= 3:
+                self.draw_points.append(self.draw_points[0])
+                self.draw_polygon(self.current_image, self.draw_points, close=True)
+                cv2.imshow("Current Image", self.current_image)
+                key = list(self.marks_dict)[self.current_index]
+                self.marks_dict[key][self.current_label].append(self.draw_points)
 
     def mouse_detection(self, event, x, y, flags, param):
         """
@@ -164,7 +206,6 @@ class ImageMarker:
             y -- y coordinate of the click in an image
         """
         # if the left mouse was clicked, record the starting (x,y) coordinates
-
         if event == cv2.EVENT_LBUTTONDOWN:
             self.draw_points = [x, y]
         # check to see if the mouse was released
@@ -174,11 +215,8 @@ class ImageMarker:
             # draw a rectangle around the region of interest
             x1, y1, x2, y2 = self.draw_points
             self.draw_selection(self.current_image, x1, y1, x2, y2)
-            if self.options['show_size']:
-                self.print_size_text(self.options, self.current_image, x1, y1, x2, y2)
             cv2.imshow("Current Image", self.current_image)
             # save mark in marks directory
-
             key = list(self.marks_dict)[self.current_index]
             self.marks_dict[key][self.current_label].append(self.draw_points)
             self.draw_points = []
@@ -189,18 +227,16 @@ class ImageMarker:
                 x1, y1, x2, y2 = tmp_points
                 tmp_image = self.current_image.copy()
                 self.draw_selection(tmp_image, x1, y1, x2, y2)
-                if self.options['show_size']:
-                    self.print_size_text(self.options, tmp_image, x1, y1, x2, y2)
                 cv2.imshow("Current Image", tmp_image)
 
-    def generate_KITTI_labels(self, input_list, output_folder, marks_dict):
+    def generate_KITTI_labels(self, output_folder, marks_dict):
         """
         Iterate all files and creates a KITTI format label files
         in a way supported by Digits for object detection.
 
         Arguments:
-            input_list -- list of all image files
             output_folder -- folder where all KITTI files will be saved
+            marks_dict -- dictionary with all images marks
         """
         print("Generating KITTI format marks...")
         for filename, labels in marks_dict.items():
@@ -213,7 +249,20 @@ class ImageMarker:
                             text_file.write("%s 0 0 0 %s %s %s %s 0 0 0 0 0 0 0\n" % (key, x1, y1, x2, y2))
         print("Done!")
 
-    def find_next_image_without_marks(self, current_index, marks_dict, current_label):
+    def generate_VOC_labels(self, output_folder, marks_dict):
+        pass
+
+    def generate_IMAGE_labels(self, output_folder, marks_dict):
+        """
+        Iterate all files and creates IMAGE segmentation labels.
+
+            Arguments:
+                output_folder -- folder where all segmentation images will be saved
+                marks_dict -- dictionary with all image marks
+        """
+        pass
+
+    def find_next_image_without_marks(self, current_index, marks_dict, current_label, mode):
         """
         Finds the next image without any marks in the marks dictionary
 
@@ -224,12 +273,12 @@ class ImageMarker:
         for i, (filename, labels) in enumerate(marks_dict.items()):
             if not labels[current_label]:
                 current_index = i
-                current_image, current_index = self.load_current_image(current_index, marks_dict, current_label)
+                current_image, current_index = self.load_current_image(current_index, marks_dict, current_label, mode)
                 return current_index, current_image
 
         # if all images have labels, do nothing
         print("All images have been labeled.")
-        current_image, current_index = self.load_current_image(current_index, marks_dict, current_label)
+        current_image, current_index = self.load_current_image(current_index, marks_dict, current_label, mode)
         return current_index, current_image
 
     def remove_last_mark_created(self, marks_dict, current_index, current_label):
@@ -259,6 +308,20 @@ class ImageMarker:
             lines = f.read().splitlines()
             return lines
 
+    def generate_labels(self, mode, label_format, output_folder, marks_dict):
+
+        if mode == 'detection':
+            if label_format == 'kitti':
+                self.generate_KITTI_labels(output_folder, marks_dict)
+            elif label_format == 'voc':
+                self.generate_VOC_labels(output_folder, marks_dict)
+            else:
+                print("Not implemented: %s format in mode %s." % (label_format, mode))
+
+        elif mode == 'segmentation':
+            if label_format == 'images':
+                self.generate_IMAGE_labels(output_folder, marks_dict)
+
     def run(self):
         """
         Mode detection in use.
@@ -266,11 +329,9 @@ class ImageMarker:
         All images are displayed one by one,
         the user manually labels them.
         """
-        current_index = 0
-        current_label_index = 0
-        current_label = self.labels[current_label_index]
+        self.current_label = self.labels[self.current_label_index]
 
-        marks_dict = self.load_marks_dict(self.input_folder, self.input_files, self.labels)
+        self.marks_dict = self.load_marks_dict(self.input_folder, self.input_files, self.labels)
 
         cv2.namedWindow('Current Image')
 
@@ -283,47 +344,53 @@ class ImageMarker:
         while key != ord('q'):
 
             # Display current image
-            current_image, current_index = self.load_current_image(current_index, marks_dict, current_label)
-
+            self.current_image, self.current_index = self.load_current_image(self.current_index,
+                                                                             self.marks_dict,
+                                                                             self.current_label,
+                                                                             self.mode)
             # Wait for user input
             key = cv2.waitKey() & 0xFF
 
             # If 'a' is pressed, go left on the images list.
             if key == ord("a"):
-                current_index -= 1
+                self.current_index -= 1
+                if self.mode == 'segmentation':
+                    self.draw_points = []
 
             # If 'd' is pressed, go right on the images list.
             elif key == ord("d"):
-                current_index += 1
+                self.current_index += 1
+                if self.mode == 'segmentation':
+                    self.draw_points = []
 
             # If 'g' is pressed, generate labels in format specified.
             elif key == ord("g"):
-                self.generate_KITTI_labels(self.input_files, self.output_folder, marks_dict)
+                self.generate_labels(self.mode, self.label_format, self.output_folder, self.marks_dict)
 
             # If 's' is pressed, find the next image in the list without marks.
             elif key == ord("s"):
-                current_index, current_image = self.find_next_image_without_marks(current_index,
-                                                                                  marks_dict,
-                                                                                  current_label)
+                self.current_index, self.current_image = self.find_next_image_without_marks(self.current_index,
+                                                                                            self.marks_dict,
+                                                                                            self.current_label)
             # If 'r' is pressed, delete last mark created on the current image.
             elif key == ord("r"):
-                marks_dict = self.remove_last_mark_created(marks_dict,
-                                                           current_index,
-                                                           current_label)
+                self.marks_dict = self.remove_last_mark_created(self.marks_dict,
+                                                                self.current_index,
+                                                                self.current_label)
 
             # If '1' is pressed, cycle among all labels in the file.
             elif key == ord("1"):
-                current_label_index += 1
-                if current_label_index >= len(self.labels):
-                    current_label_index = 0
-                current_label = self.labels[current_label_index]
+                self.current_label_index += 1
+                if self.current_label_index >= len(self.labels):
+                    self.current_label_index = 0
+                self.current_label = self.labels[self.current_label_index]
 
             # If "q" is pressed, close the script
             elif key == ord("q"):
-                self.save_marks(self.input_folder, marks_dict)
+                self.save_marks(self.input_folder, self.marks_dict)
 
             # always save the marks in file
-            self.save_marks(self.input_folder, marks_dict)
+            self.save_marks(self.input_folder, self.marks_dict)
 
 
 if __name__ == '__main__':
