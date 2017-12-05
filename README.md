@@ -25,7 +25,21 @@ python ImageMarkerTool.py
 --label_format, -lf         # Optional argument for detection labeling.
                             #   - kitti (default)
                             #   - voc
+                            
+# Controls   
+-- 'a'                      # Show the left image on the list.
+-- 'd'                      # Show the right image on the list.
+-- 's'                      # Find next image unlabelled.
+-- 'r'                      # Remove last label created on the current image.
+-- '1'                      # Change the selected label cycling trough all of them.
+-- 'g'                      # Generate output labels for all images using the selected label format.
+-- 'q'                      # Close the application
+                            
 ```
+
+
+
+
 
 
 ### Requirements
