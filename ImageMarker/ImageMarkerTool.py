@@ -31,7 +31,6 @@ class ImageMarker:
         self.current_label_index = 0
         self.current_image = None
         self.current_index = 0
-        self.key_colors = None
 
     def read_input_files(self, input_folder):
         """
