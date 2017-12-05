@@ -1,23 +1,35 @@
 # Toolbox
 
 ## 1. ImageMarker
-This tool helps labeling files for object detection in Digits.
-Each mark created in an image is transformed to KITTI format labeling.
-It supports several labels.
+This tool assists in labeling images for object detection and segmentation.
+
+Formats supported for Detection:
+* KITTI - Used in Nvidia Digits
+* VOC   - *Not implemented yet*
+
+Formats supported for Segmentation:
+* Grayscale Image Labels
+* RGB Image Labels - *Not implemented yet*
 
 ### How to use?
+```bash
+python ImageMarkerTool.py
+
+# Arguments
+--input, -in                # Path to images folder.
+--output, -out              # Path where labels will be saved.
+--labels, -l                # List of objects to label, MUST BE IN ALPHABETICAL ORDER.
+--mode, -m                  # Labeling mode used.
+                            #   - detection (default)
+                            #   - segmentation.
+--label_format, -lf         # Optional argument for detection labeling.
+                            #   - kitti (default)
+                            #   - voc
 ```
-./ImageMarkerTool.py input/ output/ labels
-```
-* 'a' - move left on images list
-* 'd' - move right on images list
-* '1' - cycle trough labels
-* 'p' - disable mark size 
-* 's' - find next image without labels
-* 'r' - remove last label created
-* 'g' - generate kitti labels
-* 'q' - close 
+
 
 ### Requirements
-* numpy==1.11.0
-* cv2==3.2.0
+
+* Python 3.6+
+* Opencv 3.0
+* Numpy 1.11+
