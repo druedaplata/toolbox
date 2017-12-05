@@ -38,6 +38,9 @@ class ImageMarker:
         
         Arguments:
             input_folder -- path to folder with images
+
+        Returns:
+            files -- list of supported files found in input_folder
         """
         supported_file_types = ('*.jpg', '*.jpeg', '*.png')
         files = [glob.glob('%s/%s' % (input_folder, filetype)) for filetype in supported_file_types]
@@ -63,7 +66,10 @@ class ImageMarker:
         Arguments:
             input_folder -- path where all images are stored
             input_list -- list of all images in input_folder
-            labels -- list of labels 
+            labels -- list of labels
+
+        Returns:
+            marks_dict -- dictionary with all files and labels created for each one of them
         """
         marks_file = '%s%s' % (input_folder, '%s_marks.pickle' % self.mode)
         if os.path.isfile(marks_file):
@@ -85,10 +91,12 @@ class ImageMarker:
             input_folder -- input folder where the pickle file will be saved
             marks_dict -- marks file 
         """
-        marks_file = '%s%s' % (input_folder, '%s_marks.pickle' % self.mode)
-        save_dict = open(marks_file, 'wb')
-        pickle.dump(marks_dict, save_dict)
-        save_dict.close()
+        try:
+            marks_file = '%s%s' % (input_folder, '%s_marks.pickle' % self.mode)
+            with open(marks_file, 'wb') as mf:
+                pickle.dump(marks_dict, mf)
+        except IOError:
+            print('Could not save marks directory')
 
     def load_current_image(self, current_index, marks_dict, current_label, mode):
         """
@@ -97,6 +105,10 @@ class ImageMarker:
         Arguments:
             input_folder -- path to folder with all images
             image_path -- path to the current image to be displayed
+
+        Returns:
+            current_image -- numpy matrix for the current image loaded
+            current_index -- index of the current image in the full list of images
         """
 
         keys = list(marks_dict.keys())
@@ -238,7 +250,7 @@ class ImageMarker:
             output_folder -- folder where all KITTI files will be saved
             marks_dict -- dictionary with all images marks
         """
-        print("Generating KITTI format marks...")
+        print("Generating KITTI format marks for detection...")
         for filename, labels in marks_dict.items():
             input_name = basename(filename)
             output_name = splitext(input_name)[0] + ".txt"
@@ -260,7 +272,16 @@ class ImageMarker:
                 output_folder -- folder where all segmentation images will be saved
                 marks_dict -- dictionary with all image marks
         """
-        pass
+        print("Generating IMAGE labels for segmentation...")
+        for filename, labels in marks_dict.items():
+            input_name = basename(filename)
+            output_name = input_name
+            output_image = np.zeros((640, 640))
+            for key, values in labels.items():
+                for points in values:
+                    cv2.fillPoly(output_image, np.int32([points]), (255, 255, 255), cv2.LINE_AA)
+                cv2.imwrite('%s/%s' % (output_folder, output_name), output_image)
+        print("Done!")
 
     def find_next_image_without_marks(self, current_index, marks_dict, current_label, mode):
         """
@@ -309,7 +330,6 @@ class ImageMarker:
             return lines
 
     def generate_labels(self, mode, label_format, output_folder, marks_dict):
-
         if mode == 'detection':
             if label_format == 'kitti':
                 self.generate_KITTI_labels(output_folder, marks_dict)
@@ -319,13 +339,10 @@ class ImageMarker:
                 print("Not implemented: %s format in mode %s." % (label_format, mode))
 
         elif mode == 'segmentation':
-            if label_format == 'images':
-                self.generate_IMAGE_labels(output_folder, marks_dict)
+            self.generate_IMAGE_labels(output_folder, marks_dict)
 
     def run(self):
         """
-        Mode detection in use.
-
         All images are displayed one by one,
         the user manually labels them.
         """
@@ -371,7 +388,8 @@ class ImageMarker:
             elif key == ord("s"):
                 self.current_index, self.current_image = self.find_next_image_without_marks(self.current_index,
                                                                                             self.marks_dict,
-                                                                                            self.current_label)
+                                                                                            self.current_label,
+                                                                                            self.mode)
             # If 'r' is pressed, delete last mark created on the current image.
             elif key == ord("r"):
                 self.marks_dict = self.remove_last_mark_created(self.marks_dict,
@@ -410,9 +428,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    x = ImageMarker(args.input_folder,
-                    args.output_folder,
-                    args.labels,
-                    args.mode,
-                    args.label_format)
-    x.run()
+    tool = ImageMarker(args.input_folder,
+                       args.output_folder,
+                       args.labels,
+                       args.mode,
+                       args.label_format)
+    tool.run()
