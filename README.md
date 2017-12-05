@@ -37,8 +37,19 @@ python ImageMarkerTool.py
                             
 ```
 
+### Detection Mode
+To label images for detection, we use a bounding box.
+Simply click and drag to create a box for each object of interest in the image.
+
+<img src="ImageMarker/detection_example.png" width="300px">
 
 
+### Segmentation Mode
+To label image for segmentation, we use a polygon shape.
+Left Click in all points following the shape of the object of interest in the image,
+to close the polygon correctlye use a "RIGHT CLICK" 
+
+<img src="ImageMarker/segmentation_example.png" width="300px">
 
 
 
