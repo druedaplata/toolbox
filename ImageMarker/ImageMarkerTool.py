@@ -342,17 +342,6 @@ class ImageMarker:
         elif mode == 'segmentation':
             self.generate_IMAGE_labels(output_folder, marks_dict)
 
-    def get_colors(self, labels):
-        """
-
-            Arguments:
-                labels --
-
-            Returns:
-                key_colors -- returns a dictionary where each label has a grayscale value
-        """
-
-
     def run(self):
         """
         All images are displayed one by one,
@@ -361,7 +350,6 @@ class ImageMarker:
         self.current_label = self.labels[self.current_label_index]
 
         self.marks_dict = self.load_marks_dict(self.input_folder, self.input_files, self.labels)
-
 
         cv2.namedWindow('Current Image')
 
