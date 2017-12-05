@@ -31,6 +31,7 @@ class ImageMarker:
         self.current_label_index = 0
         self.current_image = None
         self.current_index = 0
+        self.key_colors = None
 
     def read_input_files(self, input_folder):
         """
@@ -277,9 +278,9 @@ class ImageMarker:
             input_name = basename(filename)
             output_name = input_name
             output_image = np.zeros((640, 640))
-            for key, values in labels.items():
+            for i, (key, values) in enumerate(labels.items(), 1):
                 for points in values:
-                    cv2.fillPoly(output_image, np.int32([points]), (255, 255, 255), cv2.LINE_AA)
+                    cv2.fillPoly(output_image, np.int32([points]), i * (255/len(labels)), cv2.LINE_AA)
                 cv2.imwrite('%s/%s' % (output_folder, output_name), output_image)
         print("Done!")
 
@@ -341,6 +342,17 @@ class ImageMarker:
         elif mode == 'segmentation':
             self.generate_IMAGE_labels(output_folder, marks_dict)
 
+    def get_colors(self, labels):
+        """
+
+            Arguments:
+                labels --
+
+            Returns:
+                key_colors -- returns a dictionary where each label has a grayscale value
+        """
+
+
     def run(self):
         """
         All images are displayed one by one,
@@ -349,6 +361,7 @@ class ImageMarker:
         self.current_label = self.labels[self.current_label_index]
 
         self.marks_dict = self.load_marks_dict(self.input_folder, self.input_files, self.labels)
+
 
         cv2.namedWindow('Current Image')
 
