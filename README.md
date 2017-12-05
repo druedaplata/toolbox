@@ -31,5 +31,5 @@ python ImageMarkerTool.py
 ### Requirements
 
 * Python 3.6+
-* Opencv 3.0
+* Opencv 3.0+
 * Numpy 1.11+
