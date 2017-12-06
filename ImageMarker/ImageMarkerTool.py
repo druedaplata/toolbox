@@ -112,13 +112,20 @@ class ImageMarker:
         """
 
         keys = list(marks_dict.keys())
-        current_index = 0 if current_index >= len(keys) else current_index
+        current_index = 0 if abs(current_index) >= len(keys) else current_index
         # Load current image
         image_path = keys[current_index]
         current_image = cv2.imread('%s' % image_path)
 
         font = cv2.FONT_HERSHEY_SIMPLEX
-        cv2.putText(current_image, "Label: %s" % current_label, (10, 20), font, 0.6, (0, 0, 0), 2)
+        cv2.putText(current_image,
+                    "Label: %s" % current_label,
+                    (10, 20),
+                    font,
+                    0.6,
+                    (0, 0, 180),
+                    thickness=1,
+                    lineType=cv2.LINE_AA)
         # Draw labels for current image
         if image_path in marks_dict:
             for mark in marks_dict[image_path][current_label]:
