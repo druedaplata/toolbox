@@ -45,7 +45,11 @@ class ImageMarker:
         """
         supported_file_types = ('*.jpg', '*.jpeg', '*.png')
         files = [glob.glob('%s/%s' % (input_folder, filetype)) for filetype in supported_file_types]
-        return list(itertools.chain.from_iterable(files))
+        if files:
+            return list(itertools.chain.from_iterable(files))
+        else:
+            print("There are no supported images in %s" % input_folder)
+            return None
 
     def setup_output_folder(self, output_folder: str) -> str:
         """
@@ -112,7 +116,6 @@ class ImageMarker:
             current_image -- numpy matrix for the current image loaded
             current_index -- index of the current image in the full list of images
         """
-
         keys = list(marks_dict.keys())
         current_index = 0 if abs(current_index) >= len(keys) else current_index
         # Load current image
@@ -188,6 +191,8 @@ class ImageMarker:
         elif event == cv2.EVENT_LBUTTONUP:
             self.draw_polygon(self.current_image, self.draw_points)
             cv2.imshow("Current Image", self.current_image)
+            key = list(self.marks_dict)[self.current_index]
+            self.marks_dict[key][self.current_label].append(self.draw_points)
         elif event == cv2.EVENT_RBUTTONDOWN:
             if len(self.draw_points) >= 3:
                 self.draw_points.append(self.draw_points[0])
@@ -195,6 +200,7 @@ class ImageMarker:
                 cv2.imshow("Current Image", self.current_image)
                 key = list(self.marks_dict)[self.current_index]
                 self.marks_dict[key][self.current_label].append(self.draw_points)
+                self.draw_points = []
 
     def mouse_detection(self, event, x, y, flags, param):
         """
@@ -292,7 +298,7 @@ class ImageMarker:
         current_image, current_index = self.load_current_image(current_index, marks_dict, current_label, mode)
         return current_index, current_image
 
-    def remove_last_mark_created(self, marks_dict: Dict, current_index: int, current_label: str) -> Dict:
+    def remove_last_mark_created(self, marks_dict: Dict, current_index: int, current_label: str, mode: str) -> Dict:
         """
         Removes the last mark created in the current image being shown
         
@@ -301,9 +307,17 @@ class ImageMarker:
             current_index -- index of the current image shown
         """
         try:
-            marks_dict[list(marks_dict.keys())[current_index]][current_label].pop()
+            if mode == 'detection':
+                marks_dict[list(marks_dict.keys())[current_index]][current_label].pop()
+            elif mode == 'segmentation':
+                print(marks_dict[list(marks_dict.keys())[current_index]][current_label])
+                if marks_dict[list(marks_dict.keys())[current_index]][current_label][-1]:
+                    marks_dict[list(marks_dict.keys())[current_index]][current_label][-1].pop()
+                else:
+                    tmp_list = list(filter(None, marks_dict[list(marks_dict.keys())[current_index]][current_label]))
+                    marks_dict[list(marks_dict.keys())[current_index]][current_label] = tmp_list
             return marks_dict
-        except IndexError:
+        except IndexError as e:
             print("There are no marks in this image")
             return marks_dict
 
@@ -384,7 +398,8 @@ class ImageMarker:
             elif key == ord("r"):
                 self.marks_dict = self.remove_last_mark_created(self.marks_dict,
                                                                 self.current_index,
-                                                                self.current_label)
+                                                                self.current_label,
+                                                                self.mode)
 
             # If '1' is pressed, cycle among all labels in the file.
             elif key == ord("1"):
