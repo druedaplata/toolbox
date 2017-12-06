@@ -7,6 +7,7 @@ import pickle
 import itertools
 import argparse
 import numpy as np
+from typing import List, Dict
 from os.path import basename, splitext
 
 """
@@ -32,7 +33,7 @@ class ImageMarker:
         self.current_image = None
         self.current_index = 0
 
-    def read_input_files(self, input_folder):
+    def read_input_files(self, input_folder: str) -> List:
         """
         Read all images inside a folder, and return a list of all suported files
         
@@ -44,10 +45,9 @@ class ImageMarker:
         """
         supported_file_types = ('*.jpg', '*.jpeg', '*.png')
         files = [glob.glob('%s/%s' % (input_folder, filetype)) for filetype in supported_file_types]
-        files = list(itertools.chain.from_iterable(files))
-        return files
+        return list(itertools.chain.from_iterable(files))
 
-    def setup_output_folder(self, output_folder):
+    def setup_output_folder(self, output_folder: str) -> str:
         """
         Check if output folder exists, if not create one.
 
@@ -58,7 +58,7 @@ class ImageMarker:
             os.makedirs(output_folder)
         return output_folder
 
-    def load_marks_dict(self, input_folder, input_list, labels):
+    def load_marks_dict(self, input_folder: str, input_list: List, labels: List) -> Dict:
         """
         Loads a 'marks.pickle' file with previous saved marks if it exists,
         otherwise it creates an empty marks dictionary.
@@ -79,11 +79,12 @@ class ImageMarker:
                 load_dict.close()
                 return tmp_dict
             except IOError:
-                return {key: [] for key in input_list}
+                print("No marks file found.")
+                return {}
         else:
             return {input_path: {label: [] for label in labels} for input_path in input_list}
 
-    def save_marks(self, input_folder, marks_dict):
+    def save_marks(self, input_folder: str, marks_dict: Dict):
         """
         Save marks on images to a pickle file.
 
@@ -96,9 +97,10 @@ class ImageMarker:
             with open(marks_file, 'wb') as mf:
                 pickle.dump(marks_dict, mf)
         except IOError:
-            print('Could not save marks directory')
+            print('Could not save marks directory.')
 
-    def load_current_image(self, current_index, marks_dict, current_label, mode):
+    def load_current_image(self, current_index: int, marks_dict: Dict, current_label: str, mode: str) \
+            -> (np.ndarray, int):
         """
         Loads an image and all marks found in the marks dict for it
 
@@ -121,9 +123,9 @@ class ImageMarker:
         cv2.putText(current_image,
                     "Label: %s" % current_label,
                     (10, 20),
-                    font,
-                    0.6,
-                    (0, 0, 180),
+                    fontFace=font,
+                    fontScale=0.6,
+                    color=(0, 0, 180),
                     thickness=1,
                     lineType=cv2.LINE_AA)
         # Draw labels for current image
@@ -138,27 +140,7 @@ class ImageMarker:
         cv2.imshow("Current Image", current_image)
         return current_image, current_index
 
-    def print_size_text(self, options, img, x1, y1, x2, y2):
-        """
-        Prints text on the image, next to the label created,
-        if the label is smaller than 50x50 pixels, it's shown in Red.
-        
-        Arguments:
-            options -- values to show or not the text
-            img -- current image being drawn
-            x1, y1, x2, y2 -- coordinates of the label created
-        
-        """
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        w = abs(x2 - x1)
-        h = abs(y2 - y1)
-        text = "[%d,%d]" % (abs(x2 - x1), abs(y2 - y1))
-        if options['size_warn'] and ((w >= 50) and (h >= 50)) and ((w <= 400) and (h <= 400)):
-            cv2.putText(img, text, (x2, y2), font, 0.6, (0, 255, 0), 2)
-        else:
-            cv2.putText(img, text, (x2, y2), font, 0.6, (0, 0, 255), 2)
-
-    def draw_selection(self, img, x1, y1, x2, y2):
+    def draw_selection(self, img: np.ndarray, x1: int, y1: int, x2: int, y2: int):
         """
         Draws a label in an image
         
@@ -170,7 +152,7 @@ class ImageMarker:
         cv2.line(img, (x1, y2), (x2, y1), (0, 0, 0), 2, cv2.LINE_AA)
         cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2, cv2.LINE_AA)
 
-    def draw_polygon(self, current_image, draw_points, close=False):
+    def draw_polygon(self, current_image: np.ndarray, draw_points: List, close: bool=False):
         """
         Draws all points in draw_points list in order.
 
@@ -248,7 +230,7 @@ class ImageMarker:
                 self.draw_selection(tmp_image, x1, y1, x2, y2)
                 cv2.imshow("Current Image", tmp_image)
 
-    def generate_KITTI_labels(self, output_folder, marks_dict):
+    def generate_KITTI_labels(self, output_folder: str, marks_dict: Dict):
         """
         Iterate all files and creates a KITTI format label files
         in a way supported by Digits for object detection.
@@ -268,10 +250,10 @@ class ImageMarker:
                             text_file.write("%s 0 0 0 %s %s %s %s 0 0 0 0 0 0 0\n" % (key, x1, y1, x2, y2))
         print("Done!")
 
-    def generate_VOC_labels(self, output_folder, marks_dict):
+    def generate_VOC_labels(self, output_folder: str, marks_dict: Dict):
         pass
 
-    def generate_IMAGE_labels(self, output_folder, marks_dict):
+    def generate_IMAGE_labels(self, output_folder: str, marks_dict: Dict):
         """
         Iterate all files and creates IMAGE segmentation labels.
 
@@ -290,7 +272,8 @@ class ImageMarker:
                 cv2.imwrite('%s/%s' % (output_folder, output_name), output_image)
         print("Done!")
 
-    def find_next_image_without_marks(self, current_index, marks_dict, current_label, mode):
+    def find_next_image_without_marks(self, current_index: int, marks_dict: Dict, current_label: str, mode: str) \
+            -> (int, np.ndarray):
         """
         Finds the next image without any marks in the marks dictionary
 
@@ -309,7 +292,7 @@ class ImageMarker:
         current_image, current_index = self.load_current_image(current_index, marks_dict, current_label, mode)
         return current_index, current_image
 
-    def remove_last_mark_created(self, marks_dict, current_index, current_label):
+    def remove_last_mark_created(self, marks_dict: Dict, current_index: int, current_label: str) -> Dict:
         """
         Removes the last mark created in the current image being shown
         
@@ -324,7 +307,7 @@ class ImageMarker:
             print("There are no marks in this image")
             return marks_dict
 
-    def read_labels_file(self, labels_file_path):
+    def read_labels_file(self, labels_file_path: str) -> List[str]:
         """
         Reads a file of labels to use,
         labels must be one line each.
@@ -336,7 +319,7 @@ class ImageMarker:
             lines = f.read().splitlines()
             return lines
 
-    def generate_labels(self, mode, label_format, output_folder, marks_dict):
+    def generate_labels(self, mode: str, label_format: str, output_folder: str, marks_dict: Dict):
         if mode == 'detection':
             if label_format == 'kitti':
                 self.generate_KITTI_labels(output_folder, marks_dict)
